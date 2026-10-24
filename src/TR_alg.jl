@@ -344,7 +344,7 @@ function SolverCore.solve!(
   end
 
   prox!(s, ψ, mν∇fk, ν₁)
-  set_solver_specific!(stats, :scp_norm, norm(s))
+  set_solver_specific!(stats, :cauchy_step_norm, norm(s))
   ξ1 = hk - mk1(s) + max(1, abs(hk)) * 10 * eps()
   ξ1 > 0 || error("TR: first prox-gradient step should produce a decrease but ξ1 = $(ξ1)")
   sqrt_ξ1_νInv = sqrt(ξ1 / ν₁)
@@ -411,6 +411,7 @@ function SolverCore.solve!(
 
     prox_evals += solver.substats.iter
     s .= solver.substats.solution
+    set_solver_specific!(stats, :step_norm, norm(s))
 
     xkn .= xk .+ s
     fkn = obj(nlp, xkn)
@@ -510,7 +511,7 @@ function SolverCore.solve!(
     @. mν∇fk = -ν₁ * ∇fk
 
     prox!(s, ψ, mν∇fk, ν₁)
-    set_solver_specific!(stats, :scp_norm, norm(s))
+    set_solver_specific!(stats, :cauchy_step_norm, norm(s))
     ξ1 = hk - mk1(s) + max(1, abs(hk)) * 10 * eps()
     sqrt_ξ1_νInv = sqrt(ξ1 / ν₁)
 

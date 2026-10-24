@@ -309,7 +309,7 @@ function SolverCore.solve!(
 
   prox!(s, ψ, mν∇fk, ν)
   norm_s = norm(s)
-  set_solver_specific!(stats, :scp_norm, norm_s)
+  set_solver_specific!(stats, :cauchy_step_norm, norm_s)
   ξ1 = fk + hk - mk1(s) + max(1, abs(fk + hk)) * 10 * eps()
   sqrt_ξ1_νInv = ξ1 ≥ 0 ? sqrt(ξ1 / ν) : sqrt(-ξ1 / ν)
   solved = (ξ1 < 0 && sqrt_ξ1_νInv ≤ neg_tol) || (ξ1 ≥ 0 && sqrt_ξ1_νInv ≤ atol)
@@ -363,6 +363,7 @@ function SolverCore.solve!(
 
     prox_evals += solver.substats.iter
     s .= solver.substats.solution
+    set_solver_specific!(stats, :step_norm, norm(s))
 
     xkn .= xk .+ s
     residual!(nls, xkn, Fkn)
@@ -447,7 +448,7 @@ function SolverCore.solve!(
     @. mν∇fk = - ν * ∇fk
     prox!(s, ψ, mν∇fk, ν)
     norm_s = norm(s)
-    set_solver_specific!(stats, :scp_norm, norm_s)
+    set_solver_specific!(stats, :cauchy_step_norm, norm_s)
     mks = mk1(s)
 
     ξ1 = fk + hk - mks + max(1, abs(hk)) * 10 * eps()

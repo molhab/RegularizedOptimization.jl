@@ -369,7 +369,7 @@ function SolverCore.solve!(
 
   if reduce_TR
     prox!(s, ψ, mν∇fk, ν)
-    set_solver_specific!(stats, :scp_norm, norm(s))
+    set_solver_specific!(stats, :cauchy_step_norm, norm(s))
     mks = mk1(s)
 
     ξ1 = hk - mks + max(1, abs(hk)) * 10 * eps()
@@ -393,9 +393,10 @@ function SolverCore.solve!(
   iprox!(s, ψ, ∇fk, dk)
   ξ = hk - mk(s) + max(1, abs(hk)) * 10 * eps()
   sNorm = χ(s)
+  set_solver_specific!(stats, :step_norm, norm(s))
 
   if !reduce_TR
-    set_solver_specific!(stats, :scp_norm, norm(s))
+    set_solver_specific!(stats, :cauchy_step_norm, norm(s))
     sqrt_ξ_νInv = ξ ≥ 0 ? sqrt(ξ / ν) : sqrt(-ξ / ν)
     solved = (ξ < 0 && sqrt_ξ_νInv ≤ neg_tol) || (ξ ≥ 0 && sqrt_ξ_νInv < atol)
     (ξ < 0 && sqrt_ξ_νInv > neg_tol) &&
@@ -493,7 +494,7 @@ function SolverCore.solve!(
 
     if reduce_TR
       prox!(s, ψ, mν∇fk, ν)
-      set_solver_specific!(stats, :scp_norm, norm(s))
+      set_solver_specific!(stats, :cauchy_step_norm, norm(s))
       ξ1 = hk - mk1(s) + max(1, abs(hk)) * 10 * eps()
       sqrt_ξ_νInv = ξ1 ≥ 0 ? sqrt(ξ1 / ν) : sqrt(-ξ1 / ν)
       solved = (ξ1 < 0 && sqrt_ξ_νInv ≤ neg_tol) || (ξ1 ≥ 0 && sqrt_ξ_νInv < atol)
@@ -504,9 +505,10 @@ function SolverCore.solve!(
     iprox!(s, ψ, ∇fk, dk)
 
     sNorm = χ(s)
+    set_solver_specific!(stats, :step_norm, norm(s))
 
     if !reduce_TR
-      set_solver_specific!(stats, :scp_norm, norm(s))
+      set_solver_specific!(stats, :cauchy_step_norm, norm(s))
       ξ = hk - mk(s) + max(1, abs(hk)) * 10 * eps()
       sqrt_ξ_νInv = ξ ≥ 0 ? sqrt(ξ / ν) : sqrt(-ξ / ν)
       solved = (ξ < 0 && sqrt_ξ_νInv ≤ neg_tol) || (ξ ≥ 0 && sqrt_ξ_νInv < atol)

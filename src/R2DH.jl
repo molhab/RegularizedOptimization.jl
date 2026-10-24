@@ -340,7 +340,8 @@ function SolverCore.solve!(
 
   spectral_test ? prox!(s, ψ, mν∇fk, ν₁) : iprox!(s, ψ, ∇fk, dkσk)
   norm_s = norm(s)
-  set_solver_specific!(stats, :scp_norm, norm_s)
+  set_solver_specific!(stats, :cauchy_step_norm, norm_s)
+  set_solver_specific!(stats, :step_norm, norm_s)
 
   mks = mk(s)
 
@@ -441,7 +442,8 @@ function SolverCore.solve!(
 
     spectral_test ? prox!(s, ψ, mν∇fk, ν₁) : iprox!(s, ψ, ∇fk, dkσk)
     norm_s = norm(s)
-    set_solver_specific!(stats, :scp_norm, norm_s)
+    set_solver_specific!(stats, :cauchy_step_norm, norm_s)
+    set_solver_specific!(stats, :step_norm, norm_s)
     mks = mk(s)
 
     ξ = hk - mks + max(1, abs(hk)) * 10 * eps()
