@@ -326,48 +326,50 @@ function SolverCore.solve!(
     ),
   )
 
-  callback(reg_nls, solver, stats)
+  while true
+    # compute the step s_k unless a stopping criterion was met at the Cauchy point
+    if stats.status == :unknown
+      ∆_effective = min(β * χ(s), Δk)
 
-  done = stats.status != :unknown
+      if has_bnds
+        update_bounds!(l_bound_m_x, u_bound_m_x, false, l_bound, u_bound, xk, ∆_effective)
+        set_bounds!(ψ, l_bound_m_x, u_bound_m_x)
+        set_bounds!(solver.subsolver.ψ, l_bound_m_x, u_bound_m_x)
+      else
+        set_radius!(solver.subsolver.ψ, ∆_effective)
+        set_radius!(ψ, ∆_effective)
+      end
 
-  while !done
-    ∆_effective = min(β * χ(s), Δk)
+      if isa(solver.subsolver, TRDHSolver)
+        solver.subsolver.D.d[1] = 1/ν
+        solve!(
+          solver.subsolver,
+          solver.subpb,
+          solver.substats;
+          x = s,
+          atol = stats.iter == 0 ? 1.0e-5 : max(sub_atol, min(1.0e-1, ξ1 / 10)),
+          Δk = ∆_effective / 10,
+          sub_kwargs...,
+        )
+      else
+        solve!(
+          solver.subsolver,
+          solver.subpb,
+          solver.substats;
+          x = s,
+          atol = stats.iter == 0 ? 1.0e-5 : max(sub_atol, min(1.0e-1, ξ1 / 10)),
+          ν = ν,
+          sub_kwargs...,
+        )
+      end
 
-    if has_bnds
-      update_bounds!(l_bound_m_x, u_bound_m_x, false, l_bound, u_bound, xk, ∆_effective)
-      set_bounds!(ψ, l_bound_m_x, u_bound_m_x)
-      set_bounds!(solver.subsolver.ψ, l_bound_m_x, u_bound_m_x)
-    else
-      set_radius!(solver.subsolver.ψ, ∆_effective)
-      set_radius!(ψ, ∆_effective)
+      prox_evals += solver.substats.iter
+      s .= solver.substats.solution
+      set_solver_specific!(stats, :step_norm, norm(s))
     end
 
-    if isa(solver.subsolver, TRDHSolver)
-      solver.subsolver.D.d[1] = 1/ν
-      solve!(
-        solver.subsolver,
-        solver.subpb,
-        solver.substats;
-        x = s,
-        atol = stats.iter == 0 ? 1.0e-5 : max(sub_atol, min(1.0e-1, ξ1 / 10)),
-        Δk = ∆_effective / 10,
-        sub_kwargs...,
-      )
-    else
-      solve!(
-        solver.subsolver,
-        solver.subpb,
-        solver.substats;
-        x = s,
-        atol = stats.iter == 0 ? 1.0e-5 : max(sub_atol, min(1.0e-1, ξ1 / 10)),
-        ν = ν,
-        sub_kwargs...,
-      )
-    end
-
-    prox_evals += solver.substats.iter
-    s .= solver.substats.solution
-    set_solver_specific!(stats, :step_norm, norm(s))
+    callback(reg_nls, solver, stats)
+    stats.status != :unknown && break
 
     sNorm = χ(s)
     xkn .= xk .+ s
@@ -479,10 +481,6 @@ function SolverCore.solve!(
         max_iter = max_iter,
       ),
     )
-
-    callback(reg_nls, solver, stats)
-
-    done = stats.status != :unknown
   end
 
   if verbose > 0 && stats.status == :first_order

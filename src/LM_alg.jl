@@ -331,39 +331,41 @@ function SolverCore.solve!(
     ),
   )
 
-  callback(reg_nls, solver, stats)
+  while true
+    # compute the step s_k unless a stopping criterion was met at the Cauchy point
+    if stats.status == :unknown
+      sub_atol = stats.iter == 0 ? 1.0e-3 : min(sqrt_ξ1_νInv ^ (1.5), sqrt_ξ1_νInv * 1e-3)
+      solver.subpb.model.σ = σk
+      isa(solver.subsolver, R2DHSolver) && (solver.subsolver.D.d[1] = 1/ν)
+      if isa(solver.subsolver, R2Solver) #FIXME
+        solve!(
+          solver.subsolver,
+          solver.subpb,
+          solver.substats;
+          x = s,
+          atol = sub_atol,
+          ν = ν,
+          sub_kwargs...,
+        )
+      else
+        solve!(
+          solver.subsolver,
+          solver.subpb,
+          solver.substats;
+          x = s,
+          atol = sub_atol,
+          σk = σk, #FIXME
+          sub_kwargs...,
+        )
+      end
 
-  done = stats.status != :unknown
-
-  while !done
-    sub_atol = stats.iter == 0 ? 1.0e-3 : min(sqrt_ξ1_νInv ^ (1.5), sqrt_ξ1_νInv * 1e-3)
-    solver.subpb.model.σ = σk
-    isa(solver.subsolver, R2DHSolver) && (solver.subsolver.D.d[1] = 1/ν)
-    if isa(solver.subsolver, R2Solver) #FIXME
-      solve!(
-        solver.subsolver,
-        solver.subpb,
-        solver.substats;
-        x = s,
-        atol = sub_atol,
-        ν = ν,
-        sub_kwargs...,
-      )
-    else
-      solve!(
-        solver.subsolver,
-        solver.subpb,
-        solver.substats;
-        x = s,
-        atol = sub_atol,
-        σk = σk, #FIXME
-        sub_kwargs...,
-      )
+      prox_evals += solver.substats.iter
+      s .= solver.substats.solution
+      set_solver_specific!(stats, :step_norm, norm(s))
     end
 
-    prox_evals += solver.substats.iter
-    s .= solver.substats.solution
-    set_solver_specific!(stats, :step_norm, norm(s))
+    callback(reg_nls, solver, stats)
+    stats.status != :unknown && break
 
     xkn .= xk .+ s
     residual!(nls, xkn, Fkn)
@@ -472,10 +474,6 @@ function SolverCore.solve!(
         max_iter = max_iter,
       ),
     )
-
-    callback(reg_nls, solver, stats)
-
-    done = stats.status != :unknown
   end
 
   if verbose > 0 && stats.status == :first_order
